@@ -69,10 +69,10 @@ string chat_bot (const string& question) {
     if (regex_match(query, pattern)) {
       found = true;
       answer = entry.second;
-      bot(answer);
     }
   }
   if (!found || phraseCount == 0) answer = "Sorry, I can't answer that.";
+  bot(answer);
   return answer;
 }
 
