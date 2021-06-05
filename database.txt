@@ -1,9 +1,10 @@
-who is the president of the us $ Joe Biden
-who is the president of russia $ Vladimir Putin
-hello $ Hello, Human!
+hello $ Hello, dear human!
 hi $ Hey, dude!
-what is your name $ My name is SkillBot
-what do you do $ I create easy-to-use web-servers!
-what is c $ It's a programming language
-is that project hard $ Yes, it is.
-well now $ Please!
+what is your name $ My name is SkillBot.
+who are you $ I am a simple chat-bot.
+how are you doing $ I am great, thanks!
+where do you live $ In the uWebSockets server!
+what were you made for $ For the SkillBox intensive!
+can you learn $ Yes, I can!
+do you enjoy chatting $ Yes, of course I do!
+can you make calls $ No, sadly, I cannot.
