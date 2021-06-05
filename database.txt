@@ -1,0 +1,9 @@
+who is the president of the us $ Joe Biden
+who is the president of russia $ Vladimir Putin
+hello $ Hello, Human!
+hi $ Hey, dude!
+what is your name $ My name is SkillBot
+what do you do $ I create easy-to-use web-servers!
+what is c $ It's a programming language
+is that project hard $ Yes, it is.
+well now $ Please!
