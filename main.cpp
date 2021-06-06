@@ -1,92 +1,14 @@
-#include <iostream>
-#include <nlohmann/json.hpp>
-#include <uwebsockets/App.h>
-#include <string>
-#include <map>
-#include "chatbot.h"
+#include "process.h"
 
 using namespace std;
-using json = nlohmann::json;
-
-const string COMMAND = "command";
-const string PRIVATE_MSG = "private_msg";
-const string SET_NAME = "set_name";
-const string USER_ID = "user_id";
-const string MESSAGE = "message";
-const string USER_FROM = "user_from";
-const string NAME = "user_name";
-const string ONLINE = "online";
-const string STATUS = "status";
-const string BROADCAST = "broadcast";
-
-struct PerSocketData {
-    int user_id;
-    string name = "NULL";
-};
-
-map<int, PerSocketData*> activeUsers;
-
-typedef uWS::WebSocket<false,true, PerSocketData> UWEBSOCK;
-
-string status (PerSocketData *data, bool b) {
-  json request;
-  request[COMMAND] = STATUS;
-  request[NAME] = data->name;
-  request[USER_ID] = data->user_id;
-  request[ONLINE] = b;
-  return request.dump();
-}
-
-void processMessage(UWEBSOCK *ws, string_view &message, map<int, PerSocketData*> &users, uWS::OpCode opCode) {
-  json parsed = json::parse(message);
-  PerSocketData *data = ws->getUserData();
-  json response;
-  string command = parsed[COMMAND];
-  if (command == PRIVATE_MSG) {
-    int user_id = parsed[USER_ID];
-    string user_msg = parsed[MESSAGE];
-    if (user_id == 1) {
-      response[COMMAND] = PRIVATE_MSG;
-      response[USER_FROM] = user_id;
-      response[MESSAGE] = chat_bot(user_msg);
-      ws->send(response.dump(), opCode, true);
-    } else if (users.find(user_id) != users.end()) {
-      response[COMMAND] = PRIVATE_MSG;
-      response[USER_FROM] = data->user_id;
-      response[MESSAGE] = user_msg;
-      ws->publish("userN" + to_string(user_id), response.dump());
-    } else {
-      cout << "Error! There is no user with ID = " << user_id << "!" << endl;
-      response[COMMAND] = PRIVATE_MSG;
-      response[USER_FROM] = data->user_id;
-      response[MESSAGE] = "User not found!";
-      ws->send(response.dump(), opCode, true);
-    }
-  }
-  if (command == SET_NAME) {
-    string user_name = parsed[NAME];
-    int pos = (int) user_name.find("::");
-    if (pos == -1 && user_name.length() <= 255) {
-      data->name = user_name;
-      cout << "User № " << data->user_id << " set his name to " << data->name << endl;
-      response[COMMAND] = PRIVATE_MSG;
-      response[USER_FROM] = data->user_id;
-      response[MESSAGE] = "Your name was changed to " + data->name;
-      ws->send(response.dump(), opCode, true);
-      ws->publish(BROADCAST, status(data, false));
-    } else {
-      cout << "This name is not allowed!" << endl;
-      response[COMMAND] = PRIVATE_MSG;
-      response[USER_FROM] = data->user_id;
-      response[MESSAGE] = "Incorrect name!";
-      ws->send(response.dump(), opCode, true);
-    }
-  }
-}
 
 int main() {
   int latest_id = 1;
   train();
+  PerSocketData server = {0, SERVER};
+  PerSocketData bot = {1, BOT};
+  activeUsers.insert(make_pair(0, &server));
+  activeUsers.insert(make_pair(1, &bot));
   uWS::App().ws<PerSocketData>("/*", {
     .idleTimeout = 9996,
     .open = [&latest_id](auto *ws) {

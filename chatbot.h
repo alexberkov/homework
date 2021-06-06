@@ -54,6 +54,22 @@ void savePhrases() {
   } else cout << "Error! Cannot access database." << endl;
 }
 
+bool savePhrase(const string &line) {
+  ofstream phrases("../database.txt", ios::app);
+  if (phrases.is_open()) {
+    string delimiter = " - ";
+    int pos = (int) line.find(delimiter);
+    string question = line.substr(0, pos);
+    string answer = line.substr(pos + delimiter.length());
+    question = toLower(question);
+    if (question[pos - 1] == '?') question = question.substr(0, pos - 1);
+    delimiter = " $ ";
+    phrases << question << delimiter << answer << endl;
+    phrases.close();
+    return true;
+  } else return false;
+}
+
 void bot (const string& msg) {
   cout << "Bot: " << msg << endl;
 }
@@ -84,7 +100,7 @@ void greeting() {
 
 void train() {
   string command;
-  cout << "Do you want to train the bot first?" << endl;
+  cout << "To Host: Do you want to train the bot?" << endl;
   cout << "Yes/No: ";
   cin >> command;
   cin.ignore();
