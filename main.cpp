@@ -15,15 +15,29 @@ const string USER_ID = "user_id";
 const string MESSAGE = "message";
 const string USER_FROM = "user_from";
 const string NAME = "user_name";
+const string ONLINE = "online";
+const string STATUS = "status";
+const string BROADCAST = "broadcast";
 
 struct PerSocketData {
     int user_id;
     string name = "NULL";
 };
 
+map<int, PerSocketData*> activeUsers;
+
 typedef uWS::WebSocket<false,true, PerSocketData> UWEBSOCK;
 
-void processMessage(UWEBSOCK *ws, string_view &message, int last, uWS::OpCode opCode) {
+string status (PerSocketData *data, bool b) {
+  json request;
+  request[COMMAND] = STATUS;
+  request[NAME] = data->name;
+  request[USER_ID] = data->user_id;
+  request[ONLINE] = b;
+  return request.dump();
+}
+
+void processMessage(UWEBSOCK *ws, string_view &message, map<int, PerSocketData*> &users, uWS::OpCode opCode) {
   json parsed = json::parse(message);
   PerSocketData *data = ws->getUserData();
   json response;
@@ -36,7 +50,7 @@ void processMessage(UWEBSOCK *ws, string_view &message, int last, uWS::OpCode op
       response[USER_FROM] = user_id;
       response[MESSAGE] = chat_bot(user_msg);
       ws->send(response.dump(), opCode, true);
-    } else if (user_id <= last && user_id > 0) {
+    } else if (users.find(user_id) != users.end()) {
       response[COMMAND] = PRIVATE_MSG;
       response[USER_FROM] = data->user_id;
       response[MESSAGE] = user_msg;
@@ -59,6 +73,7 @@ void processMessage(UWEBSOCK *ws, string_view &message, int last, uWS::OpCode op
       response[USER_FROM] = data->user_id;
       response[MESSAGE] = "Your name was changed to " + data->name;
       ws->send(response.dump(), opCode, true);
+      ws->publish(BROADCAST, status(data, false));
     } else {
       cout << "This name is not allowed!" << endl;
       response[COMMAND] = PRIVATE_MSG;
@@ -78,21 +93,26 @@ int main() {
       PerSocketData *data = ws->getUserData();
       data->user_id = ++latest_id;
       cout << "User № " << data->user_id << " entered the chat." << endl;
+      ws->publish(BROADCAST, status(data, true));
       ws->subscribe("broadcast");
       ws->subscribe("userN" + to_string(data->user_id));
-      cout << "Total users connected: " << latest_id << endl;
+      for (auto entry: activeUsers) ws->send(status(entry.second, true), uWS::OpCode::TEXT);
+      activeUsers[data->user_id] = data;
+      cout << "Total users connected: " << activeUsers.size() << endl;
     },
-    .message = [&latest_id](auto *ws, string_view message, uWS::OpCode opCode) {
+    .message = [](auto *ws, string_view message, uWS::OpCode opCode) {
       PerSocketData *data = ws->getUserData();
       cout << "Message from ";
       if (data->name == "NULL") cout << "№ " << data->user_id;
       else cout << data->name;
       cout << ": " << message << endl;
-      processMessage(ws, message, latest_id, opCode);
+      processMessage(ws, message, activeUsers, opCode);
     },
     .close = [](auto *ws, int code, std::string_view message) {
         PerSocketData *data = ws->getUserData();
         cout << "User № " << data->user_id << " exited the chat." << endl;
+        ws->publish(BROADCAST, status(data, false));
+        activeUsers.erase(data->user_id);
     }
   }).listen(9001, [](auto *listen_socket) {
       if (listen_socket) {
